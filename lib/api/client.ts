@@ -42,10 +42,15 @@ const USER_KEY = "myelin_user";
 const COMPANY_KEY = "myelin_active_company";
 
 export function getApiBase(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-    "http://127.0.0.1:8000"
-  );
+  const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://127.0.0.1:8000";
+  
+  // Ensure the URL is absolute (starts with http:// or https://)
+  // This prevents it from being treated as a relative path
+  if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+    return `https://${url}`;
+  }
+  
+  return url;
 }
 
 export type StoredUser = { user_id: string; email: string };
