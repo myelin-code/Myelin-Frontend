@@ -436,27 +436,55 @@ export function Ticker({
   const run = (key: string) => (
     <div key={key} className="flex shrink-0 items-center" aria-hidden={key === "b"}>
       {items.map((item, i) => (
-        <span key={i} className="flex items-center gap-2 px-5 border-r border-line-2">
-          <span className="text-xs uppercase tracking-widest text-dim">{item.label}</span>
-          <span className={"font-mono text-sm " + TICKER_TONE[item.tone]}>{item.value}</span>
-          {item.dir && (
-            <span className={"text-xs " + (item.dir === "up" ? "text-teal-bright" : "text-danger-soft")}>
-              {item.dir === "up" ? "▲" : "▼"}
+        <div 
+          key={i} 
+          className="group flex items-center gap-3 px-6 py-0.5 border-r border-white/10 hover:bg-white/5 transition-colors duration-200"
+        >
+          <span className="text-[11px] uppercase tracking-[0.15em] font-semibold text-white/60 group-hover:text-white/80 transition-colors">
+            {item.label}
+          </span>
+          <div className="flex items-center gap-2">
+            <span 
+              className={
+                "font-mono text-[15px] font-semibold tracking-tight transition-all duration-200 " + 
+                (item.tone === "good" 
+                  ? "text-teal-bright group-hover:text-teal" 
+                  : item.tone === "bad" 
+                  ? "text-danger-soft group-hover:text-danger" 
+                  : item.tone === "watch" 
+                  ? "text-amber group-hover:text-amber-bright" 
+                  : "text-white group-hover:text-white/90")
+              }
+            >
+              {item.value}
             </span>
-          )}
-        </span>
+            {item.dir && (
+              <span 
+                className={
+                  "text-[10px] font-bold transition-transform duration-200 group-hover:scale-110 " + 
+                  (item.dir === "up" 
+                    ? "text-teal-bright animate-pulse" 
+                    : "text-danger-soft animate-pulse")
+                }
+                style={{ animationDuration: "2s" }}
+              >
+                {item.dir === "up" ? "▲" : "▼"}
+              </span>
+            )}
+          </div>
+        </div>
       ))}
     </div>
   );
 
   return (
-    <div className="bg-chrome border-t border-b border-line-2 overflow-hidden">
+    <div className="bg-gradient-to-r from-chrome via-chrome/95 to-chrome border-t border-b border-white/20 overflow-hidden shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),inset_0_-1px_0_0_rgba(0,0,0,0.2)]">
       <style>
         {
           "@keyframes simTick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}.simulation-tick{animation:simTick 90s linear infinite;will-change:transform}.simulation-tick:hover{animation-play-state:paused}@media (prefers-reduced-motion:reduce){.simulation-tick{animation:none}}"
         }
       </style>
-      <div className="flex w-max simulation-tick py-1.5">
+      <div className="flex w-max simulation-tick py-2">
         {run("a")}
         {run("b")}
       </div>
