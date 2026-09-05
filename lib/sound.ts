@@ -5,9 +5,8 @@
  * an audible arrival: a short struck-bar chime, two notes, about a second. It is the only
  * sound in the app on purpose -- a UI that chimes at everything trains you to ignore it.
  *
-/**
- * `/sounds/quarter-closed.wav` and `/sounds/processing.wav` are now fetched from the Supabase
- * Storage bucket to keep all assets centralized.
+ * `/sounds/quarter-closed.wav` and `/sounds/processing.wav` are fetched from Supabase
+ * Storage bucket, with fallback to local public folder.
  *
  * Autoplay: browsers only allow this after a user gesture, and closing a quarter is one -- the
  * chime is fired from that click's own task. A rejected play is swallowed rather than
@@ -16,11 +15,18 @@
 
 const SOUND_KEY = "myelin.sound";
 const BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const CHIME = BASE_URL ? `${BASE_URL}/storage/v1/object/public/sounds/quarter-closed.wav` : `/sounds/quarter-closed.wav`;
-const PROCESSING = BASE_URL ? `${BASE_URL}/storage/v1/object/public/sounds/processing.wav` : `/sounds/processing.wav`;
+
+// Primary URLs from Supabase Storage
+const SUPABASE_CHIME = BASE_URL ? `${BASE_URL}/storage/v1/object/public/simulation-assets/quarter-closed.wav` : null;
+const SUPABASE_PROCESSING = BASE_URL ? `${BASE_URL}/storage/v1/object/public/simulation-assets/processing.wav` : null;
+
+// Fallback to local files
+const LOCAL_CHIME = `/sounds/quarter-closed.wav`;
+const LOCAL_PROCESSING = `/sounds/processing.wav`;
 
 /** One element, reused. Constructing an Audio per play leaks decoders on a long run. */
 let chime: HTMLAudioElement | null = null;
+let chimeUrl: string | null = null;
 
 export function soundEnabled(): boolean {
   if (typeof window === "undefined") return false;
@@ -56,23 +62,51 @@ export function setSoundEnabled(on: boolean): void {
   listeners.forEach((fn) => fn());
 }
 
+/** Load audio with fallback support */
+async function loadAudioWithFallback(primaryUrl: string | null, fallbackUrl: string): Promise<HTMLAudioElement> {
+  // Try primary URL first if available
+  if (primaryUrl) {
+    try {
+      const audio = new Audio(primaryUrl);
+      audio.preload = "auto";
+      // Test if it loads by trying to load metadata
+      await new Promise((resolve, reject) => {
+        audio.addEventListener("loadedmetadata", resolve, { once: true });
+        audio.addEventListener("error", reject, { once: true });
+        audio.load();
+      });
+      return audio;
+    } catch (error) {
+      console.warn(`Failed to load audio from ${primaryUrl}, falling back to local`, error);
+    }
+  }
+  
+  // Fallback to local file
+  const audio = new Audio(fallbackUrl);
+  audio.preload = "auto";
+  return audio;
+}
+
 /** Play the quarter-closed chime, unless the CEO has turned sound off. */
 export function playQuarterClosed(): void {
   if (typeof window === "undefined" || !soundEnabled()) return;
-  try {
-    if (!chime) {
-      chime = new Audio(CHIME);
-      chime.preload = "auto";
-      // Well under a notification's volume: this marks a moment, it does not announce one.
-      chime.volume = 0.35;
-    }
-    chime.currentTime = 0;
-    void chime.play().catch(() => {
+  
+  const playAudio = async () => {
+    try {
+      if (!chime) {
+        chime = await loadAudioWithFallback(SUPABASE_CHIME, LOCAL_CHIME);
+        // Well under a notification's volume: this marks a moment, it does not announce one.
+        chime.volume = 0.35;
+      }
+      chime.currentTime = 0;
+      await chime.play();
+    } catch (error) {
+      console.warn("Could not play quarter-closed sound:", error);
       /* Autoplay refused, or no output device. Silence is an acceptable outcome. */
-    });
-  } catch {
-    /* Same: never let the cue break the screen it is decorating. */
-  }
+    }
+  };
+  
+  void playAudio();
 }
 
 /**
@@ -91,20 +125,23 @@ let processingSound: HTMLAudioElement | null = null;
 /** Start the (looping) processing sound, unless sound is off. Safe to call any time. */
 export function playProcessing(): void {
   if (typeof window === "undefined" || !soundEnabled()) return;
-  try {
-    if (!processingSound) {
-      processingSound = new Audio(PROCESSING);
-      processingSound.preload = "auto";
-      processingSound.loop = true;
-      processingSound.volume = 0.2; // Soft background, never foreground.
-    }
-    processingSound.currentTime = 0;
-    void processingSound.play().catch(() => {
+  
+  const playAudio = async () => {
+    try {
+      if (!processingSound) {
+        processingSound = await loadAudioWithFallback(SUPABASE_PROCESSING, LOCAL_PROCESSING);
+        processingSound.loop = true;
+        processingSound.volume = 0.2; // Soft background, never foreground.
+      }
+      processingSound.currentTime = 0;
+      await processingSound.play();
+    } catch (error) {
+      console.warn("Could not play processing sound:", error);
       /* Autoplay refused or no output device. Silence is acceptable. */
-    });
-  } catch {
-    /* Never let the cue break the screen it is decorating. */
-  }
+    }
+  };
+  
+  void playAudio();
 }
 
 /** Stop the processing sound if it is playing. Safe to call any time. */
