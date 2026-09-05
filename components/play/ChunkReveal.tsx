@@ -61,9 +61,15 @@ export function ChunkReveal({
       }
     }
     
-    // Start SFX and show first words immediately — perfectly synchronized
-    if (enableSfx) sfx.start();
-    step(); // Call first step immediately, no delay
+    // Start SFX 1 second earlier for better alignment with the design
+    if (enableSfx) {
+      sfx.start();
+      // Delay the first visual word by 1 second so sound and animation align
+      timeoutId = window.setTimeout(step, 1000);
+    } else {
+      // Without SFX, start immediately
+      step();
+    }
     
     return () => {
       window.clearTimeout(timeoutId);
