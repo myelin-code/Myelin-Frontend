@@ -17,7 +17,7 @@ import { soundEnabled } from "@/lib/sound";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const REWIND_SFX_URL = BASE_URL
-  ? `${BASE_URL}/storage/v1/object/public/sounds/whatsapp-audio-2026-08-28.mp3`
+  ? `${BASE_URL}/storage/v1/object/public/simulation-assets/whatsapp-audio-2026-08-28.mp3`
   : `/sounds/whatsapp-audio-2026-08-28.mp3`;
 
 const VOLUME = 0.5;

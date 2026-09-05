@@ -26,7 +26,7 @@ import { soundEnabled } from "@/lib/sound";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const TYPING_SFX_URL = BASE_URL
-  ? `${BASE_URL}/storage/v1/object/public/sounds/typing-sound.mp3`
+  ? `${BASE_URL}/storage/v1/object/public/simulation-assets/typing-sound.mp3`
   : `/sounds/typing-sound.mp3`;
 
 /** Volume — audible but clearly background; the newspaper ceremony is visual-first. */
