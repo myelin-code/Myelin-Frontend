@@ -611,19 +611,27 @@ export function SimulationApp() {
    * Restoring rather than always clearing is the point: this runs on every load and after
    * every close, so without it a reload halfway through a quarter silently discarded every
    * number the CEO had entered.
+   * 
+   * IMPORTANT: Only restore draft if the quarter was already started (has a saved priority).
+   * For a brand new quarter, always start with clean defaults.
    */
   const resetPlan = useCallback(
     (next: CompanyState) => {
       const draft = readDraft(companyId, next.quarter);
-      setAlloc(draft?.lines ?? emptyAlloc());
-      setWarranty(draft?.warranty ?? "6mo");
-      setStartInno(draft?.startInno ?? []);
+      
+      // Only restore the draft if this quarter was already started (has a priority saved)
+      // This prevents Q1 values from bleeding into Q2, Q3, Q4
+      const shouldRestoreDraft = draft && draft.priority !== null;
+      
+      setAlloc(shouldRestoreDraft ? draft.lines : emptyAlloc());
+      setWarranty(shouldRestoreDraft ? draft.warranty : "6mo");
+      setStartInno(shouldRestoreDraft ? draft.startInno : []);
       // Always honour the canonical live/status state from the server. A stale draft for the
       // next quarter can have `pro.live = false` even after NPD cleared 100 and the backend's
       // next_state flipped it to true -- merging live-status from next.products prevents the
       // product development cycle from appearing to un-complete on reload.
-      const draftProducts = draft?.products ?? next.products;
-      const mergedProducts = Object.fromEntries(
+      const draftProducts = shouldRestoreDraft ? draft.products : next.products;
+      const mergedProducts = draftProducts ? Object.fromEntries(
         Object.entries(draftProducts).map(([id, p]) => [
           id,
           {
@@ -632,12 +640,12 @@ export function SimulationApp() {
               next.products[id as keyof typeof next.products]?.live ?? p.live,
           },
         ]),
-      ) as typeof draftProducts;
+      ) as typeof draftProducts : next.products;
       setProducts(mergedProducts);
-      setPayTerms(draft?.payTerms ?? next.payTerms);
-      setPriority(draft?.priority ?? null);
-      setReflection(draft?.reflection ?? { sacrifice: [] });
-      setCrisis(draft?.crisis ?? emptyCrisis());
+      setPayTerms(shouldRestoreDraft ? draft.payTerms : next.payTerms);
+      setPriority(shouldRestoreDraft ? draft.priority : null);
+      setReflection(shouldRestoreDraft ? draft.reflection : { sacrifice: [] });
+      setCrisis(shouldRestoreDraft ? draft.crisis : emptyCrisis());
       setAdvanced(true);
       setProjection(null);
     },
