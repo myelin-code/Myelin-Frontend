@@ -28,7 +28,7 @@ export function Offline() {
             <WifiOff className="h-16 w-16 text-faint" strokeWidth={1.5} />
           </div>
 
-          <Eyebrow accent="slate" className="justify-center">
+          <Eyebrow accent="cyan" className="justify-center">
             Connection lost
           </Eyebrow>
 
