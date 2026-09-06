@@ -12,11 +12,9 @@ import {
   SCREEN_INBOX_SOURCES,
   SCREEN_META,
   SCREEN_TEACHING_NOTE,
-  capexLakh,
   groupOverridden,
   groupTotal,
   numericAlloc,
-  opexLakh,
   spreadGroup,
 } from "@/lib/simulation/constants";
 import { inr, lakh, num, spinnerKeyDown } from "@/lib/simulation/format";
@@ -34,7 +32,6 @@ function DecisionCard({
   cash,
   budget,
   budgetExhausted,
-  budgetRemaining,
   onBudgetExceeded,
   readOnly,
 }: {
@@ -44,7 +41,6 @@ function DecisionCard({
   cash: number;
   budget: Budget;
   budgetExhausted: boolean;
-  budgetRemaining: number;
   onBudgetExceeded: () => void;
   readOnly?: boolean;
 }) {
@@ -52,10 +48,6 @@ function DecisionCard({
   const total = groupTotal(A, item);
   const overridden = groupOverridden(A, item);
   const daysOfCash = cash > 0 ? Math.round(((total * 1e5) / cash) * 90) : 0;
-  const left = budget.ceiling - budget.committed;
-  // Allow very large allocations if budget ceiling is 0 (preview hasn't loaded yet)
-  // This handles the case where Path A financing hasn't been reflected in budget yet
-  const maxAllowed = budget.ceiling > 0 ? total + left : 999999;
 
   return (
     <div className="border border-line bg-raise">
@@ -86,34 +78,25 @@ function DecisionCard({
               value={total === 0 ? "" : total}
               placeholder="0"
               readOnly={readOnly}
+              disabled={budgetExhausted && num(total) === 0}
               onChange={(e) => {
                 const newVal = e.target.value.replace(/^-/, "");
-                const newNum = num(newVal);
-                // Only check budget when INCREASING spend
-                if (budget.ceiling > 0 && newNum > total) {
-                  const additional = newNum - total;
-                  if (additional * 1e5 > left) {
-                    onBudgetExceeded();
-                    return; // Don't update state
-                  }
+                if (num(newVal) > total && budget.committed >= budget.ceiling) {
+                  onBudgetExceeded();
+                  return;
                 }
                 setAlloc(spreadGroup(alloc, item, newVal));
               }}
               onKeyDown={(e) => spinnerKeyDown(e, { step: 1, min: 0, onChange: (v) => {
-                const vNum = num(v);
-                // Only check budget when INCREASING spend
-                if (budget.ceiling > 0 && vNum > total) {
-                  const additional = vNum - total;
-                  if (additional * 1e5 > left) {
-                    onBudgetExceeded();
-                    return; // Don't update state
-                  }
+                if (num(v) > total && budget.committed >= budget.ceiling) {
+                  onBudgetExceeded();
+                  return;
                 }
                 setAlloc(spreadGroup(alloc, item, v));
               }})}
               className={cn(
                 "w-24 border border-line-2 px-2 py-1 text-right font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ink",
-                readOnly && "opacity-60 cursor-not-allowed",
+                (readOnly || (budgetExhausted && num(total) === 0)) && "opacity-60 cursor-not-allowed",
               )}
             />
             <span className="text-xs uppercase tracking-widest text-dim">lakh</span>
@@ -141,23 +124,19 @@ function DecisionCard({
 function DetailLineRow({
   line,
   value,
-  alloc,
   onChange,
   ctx,
   budget,
   budgetExhausted,
-  budgetRemaining,
   onBudgetExceeded,
   readOnly,
 }: {
   line: DetailLine;
   value: string;
-  alloc: Alloc;
   onChange: (v: string) => void;
   ctx: PreviewCtx;
   budget: Budget;
   budgetExhausted: boolean;
-  budgetRemaining: number;
   onBudgetExceeded: () => void;
   readOnly?: boolean;
 }) {
@@ -165,7 +144,6 @@ function DetailLineRow({
   const preview = (line.preview ? line.preview(amount, ctx) : []).filter(Boolean) as string[];
   const cap = line.cap ? line.cap(ctx) : null;
   const overCap = cap != null && amount > cap + 0.001;
-  const left = budget.ceiling - budget.committed;
 
   return (
     <div className="border-b border-line py-3 last:border-b-0">
@@ -183,35 +161,26 @@ function DetailLineRow({
             value={value}
             placeholder="0"
             readOnly={readOnly}
+            disabled={budgetExhausted && num(value) === 0}
             onChange={(e) => {
               const newVal = e.target.value.replace(/^-/, "");
-              const newNum = num(newVal);
-              // Only check budget when INCREASING spend
-              if (budget.ceiling > 0 && newNum > amount) {
-                const additional = newNum - amount;
-                if (additional * 1e5 > left) {
-                  onBudgetExceeded();
-                  return; // Don't update state
-                }
+              if (num(newVal) > num(value) && budget.committed >= budget.ceiling) {
+                onBudgetExceeded();
+                return;
               }
               onChange(newVal);
             }}
             onKeyDown={(e) => spinnerKeyDown(e, { step: 0.5, min: 0, onChange: (v) => {
-              const vNum = num(v);
-              // Only check budget when INCREASING spend
-              if (budget.ceiling > 0 && vNum > amount) {
-                const additional = vNum - amount;
-                if (additional * 1e5 > left) {
-                  onBudgetExceeded();
-                  return; // Don't update state
-                }
+              if (num(v) > num(value) && budget.committed >= budget.ceiling) {
+                onBudgetExceeded();
+                return;
               }
               onChange(v);
             }})}
             className={
               "w-24 border px-2 py-1 text-right font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ink " +
               (overCap ? "border-danger text-tone-bad" : "border-line-2") +
-              (readOnly ? " opacity-60 cursor-not-allowed" : "")
+              ((readOnly || (budgetExhausted && num(value) === 0)) ? " opacity-60 cursor-not-allowed" : "")
             }
           />
           <span className="text-xs uppercase tracking-widest text-dim w-10">lakh</span>
@@ -238,7 +207,6 @@ export function DepartmentScreen({
   ctx,
   budget,
   budgetExhausted,
-  budgetRemaining,
   onBudgetExceeded,
   dirs,
   inbox,
@@ -255,7 +223,6 @@ export function DepartmentScreen({
   ctx: PreviewCtx;
   budget: Budget;
   budgetExhausted: boolean;
-  budgetRemaining: number;
   onBudgetExceeded: () => void;
   dirs: Readiness[];
   inbox: InboxMessage[];
@@ -296,7 +263,7 @@ export function DepartmentScreen({
 
       <div className="space-y-3">
         {group.items.map((item) => (
-          <DecisionCard key={item.id} item={item} alloc={alloc} setAlloc={setAlloc} cash={s.cash} budget={budget} budgetExhausted={budgetExhausted} budgetRemaining={budgetRemaining} onBudgetExceeded={onBudgetExceeded} readOnly={readOnly} />
+          <DecisionCard key={item.id} item={item} alloc={alloc} setAlloc={setAlloc} cash={s.cash} budget={budget} budgetExhausted={budgetExhausted} onBudgetExceeded={onBudgetExceeded} readOnly={readOnly} />
         ))}
       </div>
 
@@ -325,11 +292,9 @@ export function DepartmentScreen({
                 key={line.key}
                 line={line}
                 value={alloc[line.key]}
-                alloc={alloc}
                 ctx={ctx}
                 budget={budget}
                 budgetExhausted={budgetExhausted}
-                budgetRemaining={budgetRemaining}
                 onBudgetExceeded={onBudgetExceeded}
                 readOnly={readOnly}
                 onChange={(val) => setAlloc({ ...alloc, [line.key]: val })}
