@@ -24,6 +24,7 @@ export type AuthResponse = {
   refresh_token: string | null;
   user_id: string;
   email: string;
+  is_admin: boolean;
 };
 
 export type LoginRequest = { email: string; password: string };
@@ -508,12 +509,47 @@ export class ApiError extends Error {
   }
 }
 
+/* ── Admin Types ────────────────────────────────────────────── */
+
+export type AdminUserSummary = {
+  user_id: string;
+  email: string;
+  role: string;
+  created_at: string;
+  latest_login?: string;
+  run_count?: number;
+};
+
+export type AdminUsersResponse = {
+  total_count: number;
+  users: AdminUserSummary[];
+};
+
+export type AdminUserDetail = AdminUserSummary & {
+  first_name: string | null;
+  institution_name: string | null;
+  degree: string | null;
+  current_year: string | null;
+  goals: string[];
+  runs: {
+    run_id: string;
+    scenario_id: string;
+    status: string;
+    created_at: string;
+    quarters: {
+      quarter: number;
+      revenue: number | string;
+      profit: number | string;
+    }[];
+  }[];
+};
+
 /* ── Demand Preview API Types ────────────────────────────────── */
 
 export type DemandPreviewRequest = {
   company_id: string;
   quarter: number;
-  
+
   // Marketing spend in lakhs
   google_ads?: number;
   meta_ads?: number;
@@ -523,7 +559,7 @@ export type DemandPreviewRequest = {
   email?: number;
   direct_marketing?: number;
   referral?: number;
-  
+
   // Optional boosts for "what if" scenarios
   brand_boost?: number;
   innovation_boost?: number;
@@ -545,7 +581,7 @@ export type DetailedDemandResponse = {
   addressable_demand_units: number;
   total_market_demand: number;
   attractive_share_pct: string;
-  
+
   // Lead breakdown
   google_leads: number;
   meta_leads: number;
@@ -556,12 +592,12 @@ export type DetailedDemandResponse = {
   direct_leads: number;
   total_raw_leads: number;
   effective_leads: number;
-  
+
   // Product metrics
   product_pull_score: string;
   conversion_ceiling_pct: string;
   expected_conversion_pct: string;
-  
+
   // Competitive position
   our_strength: string;
   rival_strength: string;

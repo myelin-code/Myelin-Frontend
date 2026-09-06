@@ -43,17 +43,17 @@ const COMPANY_KEY = "myelin_active_company";
 
 export function getApiBase(): string {
   const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://127.0.0.1:8000";
-  
+
   // Ensure the URL is absolute (starts with http:// or https://)
   // This prevents it from being treated as a relative path
   if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
     return `https://${url}`;
   }
-  
+
   return url;
 }
 
-export type StoredUser = { user_id: string; email: string };
+export type StoredUser = { user_id: string; email: string; is_admin?: boolean };
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -94,7 +94,7 @@ export function persistSession(auth: AuthResponse) {
   }
   window.localStorage.setItem(
     USER_KEY,
-    JSON.stringify({ user_id: auth.user_id, email: auth.email }),
+    JSON.stringify({ user_id: auth.user_id, email: auth.email, is_admin: auth.is_admin }),
   );
   notifySession();
 }
@@ -555,8 +555,6 @@ export const api = {
 
   /* ── PDF Reports ───────────────────────────────────────────── */
 
-  /** Generate Decision Intelligence report PDF using backend Playwright renderer.
-   *  Returns a Blob that can be downloaded or previewed. */
   generateDecisionIntelligencePdf: async (body: import("@/lib/api/report-types").DecisionIntelligenceReport): Promise<Blob> => {
     const res = await authorizedFetch("/reports/decision-intelligence/pdf", {
       method: "POST",
@@ -577,4 +575,10 @@ export const api = {
 
     return await res.blob();
   },
+
+  /* ── Admin Area ────────────────────────────────────────────── */
+
+  getAdminUsers: () => request<import("@/lib/api/types").AdminUsersResponse>("/admin/users"),
+
+  getAdminUser: (userId: string) => request<import("@/lib/api/types").AdminUserDetail>(`/admin/users/${userId}`),
 };

@@ -70,8 +70,12 @@ export function AuthSlide({ initialMode }: { initialMode: Mode }) {
     setPending(true);
     try {
       if (mode === "login") {
-        await login({ email, password });
-        router.replace(next);
+        const auth = await login({ email, password });
+        if (auth.is_admin) {
+          router.replace("/admin");
+        } else {
+          router.replace(next);
+        }
       } else {
         await register({ email, password });
         // Save the name against the account *now*, not on the next screen. Screen 2 is

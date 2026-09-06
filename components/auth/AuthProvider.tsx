@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const auth = await api.login(body);
     persistSession(auth);
     clearIdentity();
-    emit({ user: { user_id: auth.user_id, email: auth.email }, token: auth.access_token, ready: true });
+    emit({ user: { user_id: auth.user_id, email: auth.email, is_admin: auth.is_admin }, token: auth.access_token, ready: true });
     return auth;
   }, []);
 
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       persistSession(auth);
       clearIdentity();
       emit({
-        user: { user_id: auth.user_id, email: auth.email },
+        user: { user_id: auth.user_id, email: auth.email, is_admin: auth.is_admin },
         token: auth.access_token,
         ready: true,
       });
