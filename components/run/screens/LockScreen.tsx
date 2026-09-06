@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Landmark } from "lucide-react";
 import { Action, Eyebrow } from "@/components/ui/Kit";
-import { DEPARTMENTS, formatLakhs, asNumber } from "@/lib/api/catalog";
+import { DEPARTMENTS, formatLakhs, formatInr, asNumber } from "@/lib/api/catalog";
 import { useRun } from "@/components/run/RunProvider";
 
 /** Screen: confirm then navigate to processing which calls POST …/lock. */
 export function LockScreen({ quarterId }: { quarterId: string }) {
   const router = useRouter();
-  const { href, run, quarter, can } = useRun();
+  const { href, run, quarter, can, allocatedLakhs } = useRun();
   const [armed, setArmed] = useState(false);
 
   const alloc = quarter?.allocations;
@@ -27,6 +27,33 @@ export function LockScreen({ quarterId }: { quarterId: string }) {
   const crisisLines = crisis
     ? Object.entries(crisis).filter(([k, v]) => k !== "crisis_choice" && asNumber(v) > 0)
     : [];
+
+  // Calculate if locking would result in insufficient cash
+  // This is a simplified check - the actual computation happens server-side
+  const cashValidation = useMemo(() => {
+    if (!quarter) return { hasIssue: false, message: "" };
+    
+    const cashBalance = asNumber(quarter.cash_balance);
+    const totalAllocated = allocatedLakhs * 100_000; // Convert lakhs to rupees
+    
+    // Simple check: if allocated amount is close to or exceeds cash balance
+    if (totalAllocated >= cashBalance) {
+      return {
+        hasIssue: true,
+        message: `Total allocations (${formatInr(totalAllocated)}) are at or exceed available cash (${formatInr(cashBalance)}). This may result in negative cash after quarter execution.`
+      };
+    }
+    
+    // Warning if using > 95% of cash
+    if (totalAllocated > cashBalance * 0.95) {
+      return {
+        hasIssue: true,
+        message: `Total allocations (${formatInr(totalAllocated)}) use ${Math.round((totalAllocated / cashBalance) * 100)}% of available cash (${formatInr(cashBalance)}). Consider leaving buffer for fixed costs and operations.`
+      };
+    }
+    
+    return { hasIssue: false, message: "" };
+  }, [quarter, allocatedLakhs]);
 
   return (
     <div className="space-y-6">
@@ -96,6 +123,20 @@ export function LockScreen({ quarterId }: { quarterId: string }) {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {cashValidation.hasIssue && (
+        <div className="rounded-xl border border-amber/30 bg-amber/[0.07] p-4">
+          <p className="text-[13.5px] font-medium text-amber">
+            ⚠ Cash Flow Warning
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-dim">
+            {cashValidation.message}
+          </p>
+          <p className="mt-2 text-[12px] text-faint">
+            You may need to reduce allocations to ensure positive cash balance after quarter execution.
+          </p>
         </div>
       )}
 
