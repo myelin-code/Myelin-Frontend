@@ -44,17 +44,13 @@ function cleanCompanyName(name: string): string {
 import {
   ARCHETYPES,
   DECISION_GROUPS,
-  DEPARTMENTS,
   INITIAL_STATE,
-  INNOVATION_BY_ID,
   PRIORITY_BY_ID,
   SCREEN_META,
   emptyAlloc,
   numericAlloc,
-  opexLakh,
-  capexLakh,
 } from "@/lib/simulation/constants";
-import { inr, num } from "@/lib/simulation/format";
+import { inr } from "@/lib/simulation/format";
 import {
   playProcessing,
   playQuarterClosed,
@@ -498,26 +494,11 @@ export function SimulationApp() {
     [readOnly],
   );
 
-  // Live budget tracking: computes committed spend instantly from current React state
-  const localCommitted = useMemo(() => {
-    const opex = opexLakh(numericAlloc(alloc)) * 1e5;
-    const capex = capexLakh(numericAlloc(alloc)) * 1e5;
-    const inno = startInno.reduce((sum, id) => sum + (INNOVATION_BY_ID[id]?.cost || 0), 0);
-    const people = DEPARTMENTS.reduce((sum, d) => {
-      const hire = Math.round(num(alloc["hire_" + d.id]));
-      const fire = Math.round(num(alloc["fire_" + d.id]));
-      return sum + hire * d.hire + fire * d.sever;
-    }, 0);
-    const repay = num(alloc.repay) * 1e5;
-    const crisisCommit = num(crisis?.commit || "0") * 1e5;
-    return opex + capex + inno + people + repay + crisisCommit;
-  }, [alloc, startInno, crisis]);
-
-  const budgetRemaining = budget.ceiling - localCommitted;
-  // Budget ceiling is 0 until the first preview loads, which means budgetRemaining is
-  // negative and budgetExhausted is true — disabling inputs before the CEO has even
-  // started typing. Only consider the budget exhausted when the ceiling is actually loaded.
-  const budgetExhausted = budget.ceiling > 0 && budgetRemaining <= 0;
+  // Budget exhaustion check: when ceiling - committed <= 0, all inputs are blocked
+  const budgetExhausted = useMemo(
+    () => budget.ceiling - budget.committed <= 0,
+    [budget.ceiling, budget.committed],
+  );
 
   /**
    * The named wait, when there is one.
@@ -611,27 +592,19 @@ export function SimulationApp() {
    * Restoring rather than always clearing is the point: this runs on every load and after
    * every close, so without it a reload halfway through a quarter silently discarded every
    * number the CEO had entered.
-   * 
-   * IMPORTANT: Only restore draft if the quarter was already started (has a saved priority).
-   * For a brand new quarter, always start with clean defaults.
    */
   const resetPlan = useCallback(
     (next: CompanyState) => {
       const draft = readDraft(companyId, next.quarter);
-      
-      // Only restore the draft if this quarter was already started (has a priority saved)
-      // This prevents Q1 values from bleeding into Q2, Q3, Q4
-      const shouldRestoreDraft = draft && draft.priority !== null;
-      
-      setAlloc(shouldRestoreDraft ? draft.lines : emptyAlloc());
-      setWarranty(shouldRestoreDraft ? draft.warranty : "6mo");
-      setStartInno(shouldRestoreDraft ? draft.startInno : []);
+      setAlloc(draft?.lines ?? emptyAlloc());
+      setWarranty(draft?.warranty ?? "6mo");
+      setStartInno(draft?.startInno ?? []);
       // Always honour the canonical live/status state from the server. A stale draft for the
       // next quarter can have `pro.live = false` even after NPD cleared 100 and the backend's
       // next_state flipped it to true -- merging live-status from next.products prevents the
       // product development cycle from appearing to un-complete on reload.
-      const draftProducts = shouldRestoreDraft ? draft.products : next.products;
-      const mergedProducts = draftProducts ? Object.fromEntries(
+      const draftProducts = draft?.products ?? next.products;
+      const mergedProducts = Object.fromEntries(
         Object.entries(draftProducts).map(([id, p]) => [
           id,
           {
@@ -640,12 +613,12 @@ export function SimulationApp() {
               next.products[id as keyof typeof next.products]?.live ?? p.live,
           },
         ]),
-      ) as typeof draftProducts : next.products;
+      ) as typeof draftProducts;
       setProducts(mergedProducts);
-      setPayTerms(shouldRestoreDraft ? draft.payTerms : next.payTerms);
-      setPriority(shouldRestoreDraft ? draft.priority : null);
-      setReflection(shouldRestoreDraft ? draft.reflection : { sacrifice: [] });
-      setCrisis(shouldRestoreDraft ? draft.crisis : emptyCrisis());
+      setPayTerms(draft?.payTerms ?? next.payTerms);
+      setPriority(draft?.priority ?? null);
+      setReflection(draft?.reflection ?? { sacrifice: [] });
+      setCrisis(draft?.crisis ?? emptyCrisis());
       setAdvanced(true);
       setProjection(null);
     },
@@ -1095,17 +1068,6 @@ export function SimulationApp() {
       // `loadRun` fetches the term sheet whenever one is outstanding, so Q3 needs no special
       // case here beyond sending the CEO to it.
       const run = await loadRun();
-      
-      // If run is distressed or failed (e.g., budget exhausted, cash ran out), end the simulation
-      // and show the final scorecard instead of opening the next quarter
-      if (run.runStatus === "distressed" || run.runStatus === "failed") {
-        setPhase("final");
-        setWorking(null);
-        inFlight.current = false;
-        setBusy(false);
-        return;
-      }
-      
       resetPlan(run.state);
       setPhase(justClosed === 3 && !run.endgamePath ? "termsheet" : "briefing");
       // Timer continues running across quarters - don't reset
@@ -2086,28 +2048,11 @@ export function SimulationApp() {
                         {PRIORITY_BY_ID[priority].name}
                       </span>
                     )}
-                    {/* Left to commit - with investment breakdown when present */}
-                    {state.pendingInvestment > 0 ? (
-                      <span className="text-faint flex items-center gap-1">
-                        <span className="text-dim text-xs uppercase tracking-widest">Left</span>
-                        <span className="font-mono text-sm">
-                          {inr(budgetRemaining - state.pendingInvestment)}
-                        </span>
-                        <span className="text-teal-bright text-xs">+</span>
-                        <span className="font-mono text-sm text-teal-bright">
-                          {inr(state.pendingInvestment)}
-                        </span>
-                        <span className="text-dim text-xs">=</span>
-                        <span className="font-mono text-base font-semibold text-ink">
-                          {inr(budgetRemaining)}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className={budgetRemaining < 0 ? "text-danger-soft" : "text-faint"}>
-                        <span className="text-dim text-xs uppercase tracking-widest mr-1">Left</span>
-                        {inr(budgetRemaining)}
-                      </span>
-                    )}
+                    {/* Left to commit */}
+                    <span className={budget.committed > budget.ceiling ? "text-danger-soft" : "text-faint"}>
+                      <span className="text-dim text-xs uppercase tracking-widest mr-1">Left</span>
+                      {inr(budget.ceiling - budget.committed)}
+                    </span>
                     {/* Notes toggle */}
                     <button
                       onClick={() => setNotesOn(!notesOn)}
@@ -2159,7 +2104,7 @@ export function SimulationApp() {
       <BudgetExhaustedModal
         open={budgetExhaustedModalOpen}
         onClose={() => setBudgetExhaustedModalOpen(false)}
-        budgetRemaining={budgetRemaining}
+        budgetRemaining={budget.ceiling - budget.committed}
       />
 
       <RewindModal
@@ -2328,9 +2273,8 @@ export function SimulationApp() {
         archId={archId}
         crisis={crisis}
         setCrisis={guardSetCrisis}
+        locked={false}
         budget={budget}
-        budgetRemaining={budgetRemaining}
-        onBudgetExceeded={handleBudgetExceeded}
         briefing={briefing}
         commitReading={commitReading}
         readOnly={readOnly}
@@ -2373,7 +2317,6 @@ export function SimulationApp() {
         ctx={ctx}
         budget={budget}
         budgetExhausted={budgetExhausted}
-        budgetRemaining={budgetRemaining}
         onBudgetExceeded={handleBudgetExceeded}
         dirs={dirs}
         inbox={messages}
@@ -2406,7 +2349,7 @@ export function SimulationApp() {
               p={projection}
               budget={budget}
               budgetExhausted={budgetExhausted}
-              budgetRemaining={budgetRemaining}
+              budgetRemaining={budget.ceiling - budget.committed}
               onBudgetExceeded={handleBudgetExceeded}
               readOnly={readOnly}
             />
@@ -2422,7 +2365,7 @@ export function SimulationApp() {
                 p={projection}
                 budget={budget}
                 budgetExhausted={budgetExhausted}
-                budgetRemaining={budgetRemaining}
+                budgetRemaining={budget.ceiling - budget.committed}
                 onBudgetExceeded={handleBudgetExceeded}
                 readOnly={readOnly}
               />
@@ -2443,7 +2386,7 @@ export function SimulationApp() {
               p={projection}
               budget={budget}
               budgetExhausted={budgetExhausted}
-              budgetRemaining={budgetRemaining}
+              budgetRemaining={budget.ceiling - budget.committed}
               onBudgetExceeded={handleBudgetExceeded}
               readOnly={readOnly}
             />
