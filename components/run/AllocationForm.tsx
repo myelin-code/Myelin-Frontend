@@ -107,6 +107,23 @@ export function AllocationWorkspace({ deptId }: { deptId: DeptId }) {
   // that keeps a debounced write from persisting a stale render's numbers.
   async function persist(body: SpendMap) {
     if (!quarterId) throw new Error("No open quarter");
+    
+    // Validate that there's budget available before attempting to save
+    if (deptBudgetLakhs <= 0) {
+      throw new Error(
+        "Insufficient cash. You cannot allocate any money when available cash is ₹0."
+      );
+    }
+    
+    // Validate that the submission doesn't exceed available budget
+    const submissionTotal = Object.values(body).reduce((a, b) => a + (b || 0), 0);
+    if (submissionTotal > deptBudgetLakhs) {
+      throw new Error(
+        `Total allocation (₹${formatLakhs(submissionTotal)}) exceeds available budget (₹${formatLakhs(deptBudgetLakhs)}). ` +
+        `Reduce allocations by ₹${formatLakhs(submissionTotal - deptBudgetLakhs)}.`
+      );
+    }
+    
     let res: QuarterAllocationResponse;
     try {
       switch (deptId) {
