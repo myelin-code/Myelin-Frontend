@@ -6,18 +6,22 @@ import type { AdminUserDetail } from "@/lib/api/types";
 
 import { ArrowLeft, Mail, ShieldAlert, Award, Grid, Activity, PlayCircle, BarChart2 } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { ButtonSpinner } from "@/components/ui/Loading";
 import { Eyebrow } from "@/components/ui/Kit";
 
-export default function AdminUserDetailPage({ params }: { params: { id: string } }) {
+export default function AdminUserDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadUser() {
+      if (!id) return;
       try {
-        const res = await api.getAdminUser(params.id);
+        const res = await api.getAdminUser(id);
         setUser(res);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load user details.");
@@ -26,7 +30,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
       }
     }
     loadUser();
-  }, [params.id]);
+  }, [id]);
 
   if (isLoading) {
     return (
