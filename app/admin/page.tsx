@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import type { AdminUserSummary } from "@/lib/api/types";
-import { format } from "date-fns";
+
 import { Search, ShieldAlert, ArrowRight, Activity } from "lucide-react";
 import Link from "next/link";
 import { ButtonSpinner } from "@/components/ui/Loading";
@@ -102,7 +102,7 @@ export default function AdminUsersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-dim">
-                        {u.created_at ? format(new Date(u.created_at), "MMM d, yyyy") : "Unknown"}
+                        {u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Unknown"}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 border border-white/5 text-white text-xs">

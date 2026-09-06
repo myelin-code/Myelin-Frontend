@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api/client";
 import type { AdminUserDetail } from "@/lib/api/types";
-import { format } from "date-fns";
+
 import { ArrowLeft, Mail, ShieldAlert, Award, Grid, Activity, PlayCircle, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { ButtonSpinner } from "@/components/ui/Loading";
@@ -90,7 +90,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
         <div className="text-left md:text-right">
           <div className="text-xs uppercase tracking-widest text-dim mb-1">Registered</div>
           <div className="text-white bg-white/5 border border-white/10 px-4 py-2 rounded-lg font-mono text-sm">
-            {user.created_at ? format(new Date(user.created_at), "PPpp") : "Unknown"}
+            {user.created_at ? new Date(user.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Unknown"}
           </div>
         </div>
       </header>
@@ -164,7 +164,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
             <div className="text-sm">
               <span className="text-dim block mb-2">Latest Login</span>
               <div className="font-mono text-white/90">
-                {user.latest_login ? format(new Date(user.latest_login), "PPpp") : "Record unavailable"}
+                {user.latest_login ? new Date(user.latest_login).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Record unavailable"}
               </div>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                         </span>
                      </div>
                      <div className="text-xs text-dim font-mono">
-                       {run.scenario_id} • {format(new Date(run.created_at), "MMM d, yyyy h:mm a")}
+                       {run.scenario_id} • {new Date(run.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric" })}
                      </div>
                   </div>
                   <div className="mt-4 sm:mt-0 text-left sm:text-right">
