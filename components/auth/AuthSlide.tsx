@@ -71,7 +71,14 @@ export function AuthSlide({ initialMode }: { initialMode: Mode }) {
     try {
       if (mode === "login") {
         const auth = await login({ email, password });
-        if (auth.is_admin) {
+        let isAdmin = !!auth.is_admin;
+        if (!isAdmin) {
+          try {
+            const profile = await api.getProfile();
+            if (profile.role === "admin") isAdmin = true;
+          } catch (e) {}
+        }
+        if (isAdmin) {
           router.replace("/admin");
         } else {
           router.replace(next);

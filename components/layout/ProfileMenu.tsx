@@ -322,7 +322,7 @@ export function ProfileMenu() {
                   <p className="truncate text-[13.5px] font-medium text-ink">{displayName}</p>
                   <p className="truncate text-[11.5px] text-faint">{user.email}</p>
                 </div>
-                <Pill accent="teal">{humanizeId(profile?.role ?? "student")}</Pill>
+                <Pill accent={profile?.role === "admin" || user?.is_admin ? "amber" : "teal"}>{profile?.role === "admin" || user?.is_admin ? "ADMIN" : humanizeId(profile?.role ?? "student")}</Pill>
               </Link>
 
               {/* 2. Edit Profile */}

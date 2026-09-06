@@ -1,27 +1,43 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import Link from "next/link";
 import { LogOut, Users } from "lucide-react";
 import { ButtonSpinner } from "@/components/ui/Loading";
+import { api } from "@/lib/api/client";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, ready, logout } = useAuth();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (ready && user) {
+      if (user.is_admin) {
+        setIsAdmin(true);
+      } else {
+        api.getProfile().then(p => {
+          setIsAdmin(p.role === 'admin');
+        }).catch(() => setIsAdmin(false));
+      }
+    } else if (ready && !user) {
+      setIsAdmin(false);
+    }
+  }, [user, ready]);
 
   useEffect(() => {
     if (ready) {
       if (!user) {
         router.replace("/login");
-      } else if (!user.is_admin) {
+      } else if (isAdmin === false) {
         router.replace("/simulations");
       }
     }
-  }, [user, ready, router]);
+  }, [user, ready, router, isAdmin]);
 
-  if (!ready || !user || !user.is_admin) {
+  if (!ready || !user || isAdmin !== true) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-void text-white">
         <ButtonSpinner />
