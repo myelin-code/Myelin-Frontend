@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type LogoProps = {
@@ -8,7 +9,7 @@ type LogoProps = {
 };
 
 /**
- * Renders the Myelin logo matching the reference design with SVG icon and text.
+ * Renders the Myelin logo using the brand assets from /public/brand/.
  */
 export function Logo({
   variant = "lockup",
@@ -17,48 +18,37 @@ export function Logo({
 }: LogoProps) {
   if (variant === "glyph") {
     return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className={cn("h-7 w-auto", className)}
-        aria-label="Myelin"
-      >
-        <path
-          d="M3 18V6l4.5 6 4.5-6 4.5 6 4.5-6v12"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-[#14b8a6]"
-        />
-      </svg>
+      <Image
+        src="/brand/myelin-glyph.png"
+        alt="Myelin"
+        width={685}
+        height={340}
+        priority={priority}
+        className={cn("h-7 w-auto object-contain", className)}
+      />
     );
   }
 
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-[26px] w-[26px] shrink-0"
+    <span className={cn("inline-flex items-center gap-2", className)}>
+      <Image
+        src="/brand/myelin-glyph.png"
+        alt=""
+        width={685}
+        height={340}
+        priority={priority}
         aria-hidden
-      >
-        <path
-          d="M3 18V6l4.5 6 4.5-6 4.5 6 4.5-6v12"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-[#14b8a6]"
-        />
-      </svg>
-      <span
-        className="text-[15px] font-semibold uppercase tracking-[0.08em] text-[#14b8a6]"
+        className="h-[28px] w-auto shrink-0 object-contain"
+      />
+      <Image
+        src="/brand/myelin-word.png"
+        alt=""
+        width={685}
+        height={136}
+        priority={priority}
         aria-hidden
-        style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
-      >
-        MYELIN
-      </span>
+        className="h-[15px] w-auto shrink-0 object-contain"
+      />
       <span className="sr-only">Myelin</span>
     </span>
   );

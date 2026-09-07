@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 /** How long the overlay is shown (must match the 5000ms delay in closeQuarter). */
 const TOTAL_MS = 5000;
@@ -238,20 +239,18 @@ export function QuarterClosingOverlay({
             <svg className="absolute inset-0 w-full h-full" viewBox="0 0 88 88">
               <circle cx="44" cy="44" r="40" fill="none" stroke="#14b8a6" strokeWidth="0.5" opacity="0.18" />
             </svg>
-            {/* M glyph in center */}
+            {/* Myelin logo in center using brand glyph */}
             <div
-              className="relative w-[48px] h-[48px] rounded-full flex items-center justify-center"
+              className="relative w-[52px] h-[52px] rounded-full flex items-center justify-center"
               style={{ background: "#0a1a24", border: "1px solid rgba(20,184,166,0.35)" }}
             >
-              <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
-                <path
-                  d="M3 18V6l4.5 6 4.5-6 4.5 6 4.5-6v12"
-                  stroke="#14b8a6"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Image
+                src="/brand/myelin-glyph.png"
+                alt=""
+                width={685}
+                height={340}
+                className="w-[28px] h-auto object-contain"
+              />
             </div>
           </div>
 
